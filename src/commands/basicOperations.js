@@ -60,12 +60,8 @@ export const performRm = async (args) => {
   const filePath = resolveFilePath(args[0]);
 
   try {
-    if (await checkExists(filePath)) { // Use the imported checkExists function
-      await fs.unlink(filePath);
-      console.log(`File ${filePath} has been deleted`);
-    } else {
-      console.error(`File '${filePath}' does not exist`);
-    }
+    await fs.unlink(filePath);
+    console.log(`File ${filePath} has been deleted`);
   } catch (error) {
     console.error(`Failed to delete file: ${error.message}`);
   }
@@ -110,18 +106,15 @@ export const performMv = async (args) => {
 
   const [source, destination] = args.map(arg => resolveFilePath(arg));
 
-  performAction(
-    async () => {
-      try {
-        await fs.rename(source, destination);
-        console.log(`File has been moved to ${destination}`);
-      } catch (error) {
-        console.error(`Failed to move file: ${error.message}`);
-      }
-    },
-    [], 
-    ['mv', '<path_to_file>', '<path_to_new_directory>'],
-    `File has been moved to ${destination}`
-  );
+  const sourceStream = createReadStream(source);
+  const destinationStream = createWriteStream(destination);
+
+  try {
+    await pipeline(sourceStream, destinationStream);
+    await fs.unlink(source); // Delete the source file after successful copying
+    console.log(`File has been moved to ${destination}`);
+  } catch (error) {
+    console.error(`Failed to move file: ${error.message}`);
+  }
 };
 
