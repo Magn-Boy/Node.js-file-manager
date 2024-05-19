@@ -26,13 +26,13 @@ export const performCat = async (args) => {
     return;
   }
 
-  const filePath = resolveFilePath(args[0]);
-  performAction(
-    () => createReadStream(filePath, { encoding: 'utf-8' }).pipe(process.stdout),
-    [],
-    ['cat', '<path_to_file>'],
-    `Operation completed successfully`
-  );
+  const [filePath] = args.map(arg => path.resolve(process.cwd(), arg));
+  try {
+    const readStream = createReadStream(filePath, { encoding: 'utf-8' });
+    readStream.pipe(process.stdout);
+  } catch (error) {
+    console.error(`Failed to read file ${filePath}: ${error.message}`);
+  }
 };
 
 export const performAdd = async (args) => {
@@ -41,14 +41,15 @@ export const performAdd = async (args) => {
     return;
   }
 
-  const fileName = args[0];
-  const filePath = resolveFilePath(fileName);
-  performAction(
-    () => fs.writeFile(filePath, ''),
-    [],
-    ['add', '<new_file_name>'],
-    `File ${fileName} has been created`
-  );
+  const [fileName] = args;
+  const filePath = path.resolve(process.cwd(), fileName);
+
+  try {
+    await fs.writeFile(filePath, '');
+    console.log(`File ${fileName} has been created`);
+  } catch (error) {
+    console.error(`Failed to create file ${filePath}: ${error.message}`);
+  }
 };
 
 export const performRm = async (args) => {
@@ -88,14 +89,16 @@ export const performCp = async (args) => {
     return;
   }
 
-  const [source, destination] = args.map(arg => resolveFilePath(arg));
-  console.log(`Copying file from ${source} to ${destination}`);
-  performAction(
-    () => pipeline(createReadStream(source), createWriteStream(destination)),
-    [],
-    ['cp', '<path_to_file>', '<path_to_new_directory>'],
-    `File has been copied to ${destination}`
-  );
+  const [source, destination] = args.map(arg => path.resolve(process.cwd(), arg));
+  try {
+    await pipeline(
+      createReadStream(source),
+      createWriteStream(destination)
+    );
+    console.log(`File has been copied to ${destination}`);
+  } catch (error) {
+    console.error(`Failed to copy file: ${error.message}`);
+  }
 };
 
 export const performMv = async (args) => {
